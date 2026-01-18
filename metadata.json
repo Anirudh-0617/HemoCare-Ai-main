@@ -1,0 +1,9 @@
+{
+  "name": "HemoCare AI",
+  "description": "A comprehensive hemophilia management platform featuring smart bleed tracking, AI-powered triage, medication intelligence, and predictive joint health analytics.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
