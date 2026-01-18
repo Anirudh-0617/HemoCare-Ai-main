@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Droplets, ShieldCheck, Mail, Lock, User as UserIcon, ArrowRight, AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { supabase } from '../services/supabase.ts';
+import { supabase } from '../services/supabase';
 import { User } from '../types';
 
 interface Props {
@@ -27,7 +27,7 @@ const LoginView: React.FC<Props> = ({ onLogin }) => {
     try {
       if (mode === 'signup') {
         if (!formData.name) throw new Error("Full name is required.");
-        
+
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
@@ -56,11 +56,11 @@ const LoginView: React.FC<Props> = ({ onLogin }) => {
 
         if (signInError) {
           if (signInError.message === 'Invalid login credentials') {
-             throw new Error("Invalid credentials. If you haven't created an account yet, please use the 'Sign Up' link below.");
+            throw new Error("Invalid credentials. If you haven't created an account yet, please use the 'Sign Up' link below.");
           }
           throw signInError;
         }
-        
+
         if (data.user) {
           onLogin({
             id: data.user.id,
@@ -85,7 +85,7 @@ const LoginView: React.FC<Props> = ({ onLogin }) => {
           <div className="w-20 h-20 bg-medical-blue rounded-[2rem] flex items-center justify-center mx-auto mb-10 text-white shadow-xl shadow-medical-blue/20">
             <Droplets size={36} className="fill-white" />
           </div>
-          
+
           <div className="text-center mb-10">
             <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tightest uppercase mb-2">HemoCare AI</h1>
             <p className="text-slate-400 dark:text-slate-500 font-black text-[10px] tracking-[0.3em] uppercase">Cloud-Sync Health Matrix</p>
@@ -107,7 +107,7 @@ const LoginView: React.FC<Props> = ({ onLogin }) => {
                   type="text"
                   placeholder="Full Name"
                   value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
                   className="w-full bg-[#f8fafc] dark:bg-slate-800 border-none rounded-2xl py-5 pl-14 pr-4 text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-medical-blue/20 outline-none transition-all"
                 />
               </div>
@@ -119,7 +119,7 @@ const LoginView: React.FC<Props> = ({ onLogin }) => {
                 type="email"
                 placeholder="Email Address"
                 value={formData.email}
-                onChange={e => setFormData({...formData, email: e.target.value})}
+                onChange={e => setFormData({ ...formData, email: e.target.value })}
                 className="w-full bg-[#f8fafc] dark:bg-slate-800 border-none rounded-2xl py-5 pl-14 pr-4 text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-medical-blue/20 outline-none transition-all"
               />
             </div>
@@ -130,7 +130,7 @@ const LoginView: React.FC<Props> = ({ onLogin }) => {
                 type={showPassword ? "text" : "password"}
                 placeholder="Password"
                 value={formData.password}
-                onChange={e => setFormData({...formData, password: e.target.value})}
+                onChange={e => setFormData({ ...formData, password: e.target.value })}
                 className="w-full bg-[#f8fafc] dark:bg-slate-800 border-none rounded-2xl py-5 pl-14 pr-12 text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-medical-blue/20 outline-none transition-all"
               />
               <button
@@ -158,8 +158,8 @@ const LoginView: React.FC<Props> = ({ onLogin }) => {
             </button>
 
             <div className="pt-6 text-center">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => {
                   setMode(mode === 'login' ? 'signup' : 'login');
                   setError(null);
@@ -173,7 +173,7 @@ const LoginView: React.FC<Props> = ({ onLogin }) => {
           </form>
 
           <div className="mt-12 pt-8 border-t border-slate-100 dark:border-slate-800 flex items-center gap-4 text-left">
-            <div className="p-3 bg-green-500/10 text-green-500 rounded-2xl"><ShieldCheck size={24}/></div>
+            <div className="p-3 bg-green-500/10 text-green-500 rounded-2xl"><ShieldCheck size={24} /></div>
             <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 leading-relaxed uppercase tracking-wider">
               Encryption active. Your health data is secured with Supabase HIPAA-compliant infrastructure.
             </p>
