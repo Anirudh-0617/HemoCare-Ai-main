@@ -96,8 +96,8 @@ const SettingsView: React.FC<Props> = ({ user, onUpdateUser, geneticProfile, set
                   </form>
                </section>
 
-               {/* Integrations Section */}
-               <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+               {/* Integrations Section (Hidden) */}
+               {/* <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
                   <div className="p-8 md:p-10">
                      <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-8 flex items-center gap-2 uppercase"><Zap size={14} /> Automations (n8n / IFTTT)</h3>
                      <div className="space-y-6">
@@ -122,7 +122,7 @@ const SettingsView: React.FC<Props> = ({ user, onUpdateUser, geneticProfile, set
                         </button>
                      </div>
                   </div>
-               </section>
+               </section> */}
             </div>
 
             <div className="space-y-6">

@@ -98,8 +98,8 @@ const Dashboard: React.FC<Props> = ({ bleeds, meds, appointments, geneticProfile
                 key={step.id}
                 onClick={() => onNavigate(step.id)}
                 className={`flex items-center justify-between p-6 rounded-[2rem] border transition-all ${step.completed
-                    ? 'bg-green-500/5 border-green-500/20 text-green-600'
-                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-medical-blue dark:hover:border-medical-light group'
+                  ? 'bg-green-500/5 border-green-500/20 text-green-600'
+                  : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-medical-blue dark:hover:border-medical-light group'
                   }`}
               >
                 <div className="flex items-center gap-4">
