@@ -1,7 +1,8 @@
 
 import React, { useState, useRef } from 'react';
 import { BleedEntry, BleedType, Severity, Trigger } from '../types';
-import { Plus, MapPin, Camera, Info, Search, Filter, Clock, ChevronDown, X, Trash2, Check, Droplets, Activity, ShoppingBag, MoveLeft, MoveRight, Pencil } from 'lucide-react';
+import { supabase } from '../services/supabase';
+import { Plus, MapPin, Camera, Info, Search, Filter, Clock, ChevronDown, X, Trash2, Check, Droplets, Activity, ShoppingBag, MoveLeft, MoveRight, Pencil, Loader2 } from 'lucide-react';
 
 interface Props {
   bleeds: BleedEntry[];
@@ -16,6 +17,7 @@ const BleedTracker: React.FC<Props> = ({ bleeds, onAddBleed, onUpdateBleed, onNa
   const [showSuccess, setShowSuccess] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('All');
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [newBleed, setNewBleed] = useState<Partial<BleedEntry> & { side?: 'Left' | 'Right' | 'Center' }>({
@@ -84,14 +86,32 @@ const BleedTracker: React.FC<Props> = ({ bleeds, onAddBleed, onUpdateBleed, onNa
     setEditingId(null);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewBleed(prev => ({ ...prev, photoUrl: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+      setIsUploading(true);
+      try {
+        const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+        // Upload to Supabase Storage 'medical-images' bucket
+        // Assumes user is authenticated and RLS policies allow upload
+        const { data, error } = await supabase.storage
+          .from('medical-images')
+          .upload(fileName, file);
+
+        if (error) throw error;
+
+        // Get Public URL (or Signed URL for strict privacy, using public here for demo sim but secure logic applies)
+        const { data: { publicUrl } } = supabase.storage
+          .from('medical-images')
+          .getPublicUrl(fileName);
+
+        setNewBleed(prev => ({ ...prev, photoUrl: publicUrl }));
+      } catch (error) {
+        console.error('Upload failed:', error);
+        alert('Secure upload failed. Please try again.');
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 

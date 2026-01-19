@@ -48,18 +48,20 @@ import {
   Trigger, BleedType, GeneticProfile, TeamMember, Appointment, User, InsuranceProfile
 } from './types';
 
+import { SecureStorage } from './services/secureStorage';
+
 const STORAGE_KEYS = {
-  USER: 'hemocare_user',
-  BLEEDS: 'hemocare_bleeds',
-  MEDS: 'hemocare_meds',
-  INFUSIONS: 'hemocare_infusions',
-  PROFILE: 'hemocare_profile',
-  INSURANCE: 'hemocare_insurance',
-  TEAM: 'hemocare_team',
-  APPTS: 'hemocare_appointments',
-  ONBOARDING: 'hemocare_onboarding_done',
-  THEME: 'hemocare_theme',
-  LANDING: 'hemocare_landing_seen',
+  USER: 'hemocare_secure_user', // Changed key to force fresh start/migration
+  BLEEDS: 'hemocare_secure_bleeds',
+  MEDS: 'hemocare_secure_meds',
+  INFUSIONS: 'hemocare_secure_infusions',
+  PROFILE: 'hemocare_secure_profile',
+  INSURANCE: 'hemocare_secure_insurance',
+  TEAM: 'hemocare_secure_team',
+  APPTS: 'hemocare_secure_appointments',
+  ONBOARDING: 'hemocare_onboarding_done', // Keep valid boolean logic
+  THEME: 'hemocare_theme', // Theme can remain unencrypted for speed/fouc
+  LANDING: 'hemocare_landing_seen', // Non-sensitive
   AUTOMATION: 'hemocare_automation_url'
 };
 
@@ -79,26 +81,23 @@ const App: React.FC = () => {
   const [isAppLoading, setIsAppLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Non-sensitive can load from localStorage directly for speed
   const [showLanding, setShowLanding] = useState(() => !localStorage.getItem(STORAGE_KEYS.LANDING));
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem(STORAGE_KEYS.THEME) as 'light' | 'dark') || 'light');
+
   const [user, setUser] = useState<User | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem(STORAGE_KEYS.THEME) as 'light' | 'dark') || 'light';
-  });
-
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [htcInitialMode, setHtcInitialMode] = useState<'search' | 'letter' | 'emergency' | 'physio'>('search');
 
+  // Initialize empty, load async
   const [bleeds, setBleeds] = useState<BleedEntry[]>([]);
   const [meds, setMeds] = useState<Medication[]>([]);
   const [infusions, setInfusions] = useState<InfusionRecord[]>([]);
   const [geneticProfile, setGeneticProfile] = useState<GeneticProfile | null>(null);
-  const [insurance, setInsurance] = useState<InsuranceProfile>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.INSURANCE);
-    return saved ? JSON.parse(saved) : DEFAULT_INSURANCE;
-  });
+  const [insurance, setInsurance] = useState<InsuranceProfile>(DEFAULT_INSURANCE);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
@@ -114,42 +113,65 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // 1. Initial Auth Check & Session Listener
+  // 1. Initial Data Load (Secure)
   useEffect(() => {
-    const initAuth = async () => {
+    const loadSecureData = async () => {
       try {
+        // Load User
         const { data: { session } } = await supabase.auth.getSession();
+        let currentUser = null;
+
         if (session?.user) {
-          handleUserLogin({
+          currentUser = {
             id: session.user.id,
             name: session.user.user_metadata.full_name || 'HemoCare User',
             email: session.user.email || '',
             photoURL: session.user.user_metadata.avatar_url
-          });
+          };
+        } else {
+          // Fallback to local secure storage
+          currentUser = await SecureStorage.getItem(STORAGE_KEYS.USER);
         }
-      } catch (err) {
-        const localUser = localStorage.getItem(STORAGE_KEYS.USER);
-        if (localUser) setUser(JSON.parse(localUser));
+
+        if (currentUser) {
+          setUser(currentUser);
+          // Load other data from SecureStorage in parallel
+          const [savedBleeds, savedMeds, savedInfusions, savedProfile, savedInsurance, savedTeam, savedAppts] = await Promise.all([
+            SecureStorage.getItem(STORAGE_KEYS.BLEEDS, []),
+            SecureStorage.getItem(STORAGE_KEYS.MEDS, []),
+            SecureStorage.getItem(STORAGE_KEYS.INFUSIONS, []),
+            SecureStorage.getItem(STORAGE_KEYS.PROFILE, null),
+            SecureStorage.getItem(STORAGE_KEYS.INSURANCE, DEFAULT_INSURANCE),
+            SecureStorage.getItem(STORAGE_KEYS.TEAM, []),
+            SecureStorage.getItem(STORAGE_KEYS.APPTS, [])
+          ]);
+
+          setBleeds(savedBleeds);
+          setMeds(savedMeds);
+          setInfusions(savedInfusions);
+          if (savedProfile) setGeneticProfile(savedProfile);
+          if (savedInsurance) setInsurance(savedInsurance);
+          setTeam(savedTeam);
+          setAppointments(savedAppts);
+
+          // Trigger cloud sync if online
+          if (navigator.onLine) {
+            syncCloudData(currentUser.id);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load secure data", e);
       } finally {
         setIsAppLoading(false);
       }
     };
 
-    initAuth();
+    loadSecureData();
 
+    // Session Listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      if (session?.user) {
-        handleUserLogin({
-          id: session.user.id,
-          name: session.user.user_metadata.full_name || 'HemoCare User',
-          email: session.user.email || '',
-          photoURL: session.user.user_metadata.avatar_url
-        });
-      } else {
-        setUser(null);
-      }
+      // Handle auth change logic if needed, usually handled by reload or redirect
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
@@ -221,9 +243,8 @@ const App: React.FC = () => {
 
   const handleUserLogin = (u: User) => {
     setUser(u);
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(u));
+    SecureStorage.setItem(STORAGE_KEYS.USER, u);
     syncCloudData(u.id);
-    // Onboarding status is now handled by syncCloudData from DB
   };
 
   useEffect(() => {
@@ -242,6 +263,8 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    SecureStorage.clear();
+    localStorage.removeItem(STORAGE_KEYS.THEME); // Keep theme? Maybe clear everything for security.
     localStorage.clear();
     setUser(null);
     window.location.reload();
