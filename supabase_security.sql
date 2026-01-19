@@ -22,9 +22,9 @@ ON public.audit_logs FOR INSERT
 WITH CHECK (auth.uid() = user_id);
 
 -- Storage Policies
--- 1. Create the bucket if it doesn't exist
+-- 1. Create the bucket if it doesn't exist (PRIVATE for HIPAA compliance)
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('medical-images', 'medical-images', true) -- Set to false for strict private (requires signed URLs in frontend), true allows publicUrl if policy permits
+VALUES ('medical-images', 'medical-images', false) -- Private bucket - use signed URLs in frontend
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. Enable RLS (Usually enabled by default, can cause permission error if run manually)
@@ -36,7 +36,7 @@ ON storage.objects FOR INSERT
 WITH CHECK (
   bucket_id = 'medical-images' AND
   auth.role() = 'authenticated' AND
-  (storage.foldername(name))[1] <> 'private' -- Optional folder restriction
+  auth.uid() = owner -- Ensure user is the owner
 );
 
 -- 4. Policy: Users can view files (Adjust based on public/private preference)

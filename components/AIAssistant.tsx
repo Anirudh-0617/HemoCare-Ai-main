@@ -5,6 +5,8 @@ import {
   Trash2, Share2, Mic, Info, AlertTriangle,
   ChevronRight, Phone, Droplets, LifeBuoy, X, Check
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { chatWithAI } from '../services/geminiService';
 import { Message, BleedEntry, Medication } from '../types';
 
@@ -258,15 +260,29 @@ const AIAssistant: React.FC<Props> = ({ bleeds = [], meds = [] }) => {
                   {m.role === 'user' ? <User size={18} /> : <Sparkles size={18} />}
                 </div>
 
-                <div className={`p-6 rounded-[2rem] text-sm leading-relaxed shadow-sm relative ${m.role === 'user'
-                    ? 'bg-slate-900 text-white rounded-tr-sm'
-                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-tl-sm'
+                <div className={`p-6 rounded-[2rem] text-sm leading-relaxed shadow-sm relative overflow-hidden ${m.role === 'user'
+                  ? 'bg-slate-900 text-white rounded-tr-sm'
+                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-tl-sm'
                   }`}>
-                  {m.content.split('\n').map((line, idx) => (
-                    <p key={idx} className={`${idx > 0 ? 'mt-3' : ''} ${line.startsWith('⚠️') ? 'font-bold text-amber-600' : ''}`}>
-                      {line}
-                    </p>
-                  ))}
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      p: ({ children }: any) => <p className="mb-3 last:mb-0">{children}</p>,
+                      strong: ({ children }: any) => <span className="font-bold text-slate-900 dark:text-white">{children}</span>,
+                      ul: ({ children }: any) => <ul className="list-disc pl-5 mb-3 space-y-1">{children}</ul>,
+                      ol: ({ children }: any) => <ol className="list-decimal pl-5 mb-3 space-y-1">{children}</ol>,
+                      li: ({ children }: any) => <li className="pl-1">{children}</li>,
+                      table: ({ children }: any) => <div className="overflow-x-auto my-4 rounded-lg border border-slate-200 dark:border-slate-700"><table className="w-full text-xs text-left">{children}</table></div>,
+                      thead: ({ children }: any) => <thead className="bg-slate-50 dark:bg-slate-900/50 uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400">{children}</thead>,
+                      th: ({ children }: any) => <th className="px-4 py-3 border-b border-r border-slate-200 dark:border-slate-700 last:border-r-0">{children}</th>,
+                      td: ({ children }: any) => <td className="px-4 py-3 border-b border-r border-slate-200 dark:border-slate-700 last:border-r-0 last:border-b-0">{children}</td>,
+                      blockquote: ({ children }: any) => <blockquote className="border-l-4 border-blue-500 pl-4 py-1 my-3 bg-blue-50 dark:bg-blue-900/20 italic">{children}</blockquote>,
+                      code: ({ children }: any) => <code className="bg-slate-100 dark:bg-slate-900 rounded px-1 py-0.5 font-mono text-xs">{children}</code>
+                    }}
+                  >
+                    {m.content}
+                  </ReactMarkdown>
+
                   <div className={`text-[9px] font-bold uppercase tracking-widest mt-3 opacity-0 group-hover:opacity-40 transition-opacity ${m.role === 'user' ? 'text-right text-slate-400' : 'text-slate-400'}`}>
                     {m.role === 'user' ? 'You' : 'HemoCare AI'}
                   </div>
@@ -310,8 +326,8 @@ const AIAssistant: React.FC<Props> = ({ bleeds = [], meds = [] }) => {
               onClick={() => handleSend()}
               disabled={!input.trim() || loading}
               className={`p-4 rounded-full transition-all shadow-lg hover:scale-105 active:scale-95 ${input.trim()
-                  ? 'bg-blue-600 text-white shadow-blue-500/30'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                ? 'bg-blue-600 text-white shadow-blue-500/30'
+                : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
                 }`}
             >
               <Send size={20} className={input.trim() ? 'ml-0.5' : ''} />

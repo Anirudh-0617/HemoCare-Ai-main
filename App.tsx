@@ -18,6 +18,7 @@ import {
   MessageSquare,
   LogOut,
   Loader2,
+  AlertCircle,
   CloudUpload,
   Database,
   RefreshCcw,
@@ -80,10 +81,11 @@ const App: React.FC = () => {
 
   const [isAppLoading, setIsAppLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // Non-sensitive can load from localStorage directly for speed
-  const [showLanding, setShowLanding] = useState(() => !localStorage.getItem(STORAGE_KEYS.LANDING));
+  // Always show landing page first unless user is already logged in
+  const [showLanding, setShowLanding] = useState(true);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem(STORAGE_KEYS.THEME) as 'light' | 'dark') || 'light');
 
   const [user, setUser] = useState<User | null>(null);
@@ -135,6 +137,7 @@ const App: React.FC = () => {
 
         if (currentUser) {
           setUser(currentUser);
+          setShowLanding(false); // Skip landing if user is found
           // Load other data from SecureStorage in parallel
           const [savedBleeds, savedMeds, savedInfusions, savedProfile, savedInsurance, savedTeam, savedAppts] = await Promise.all([
             SecureStorage.getItem(STORAGE_KEYS.BLEEDS, []),
@@ -167,12 +170,6 @@ const App: React.FC = () => {
     };
 
     loadSecureData();
-
-    // Session Listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      // Handle auth change logic if needed, usually handled by reload or redirect
-    });
-    return () => subscription.unsubscribe();
   }, []);
 
   const syncCloudData = useCallback(async (userId: string) => {
@@ -236,6 +233,8 @@ const App: React.FC = () => {
       if (apptsData) setAppointments(apptsData);
     } catch (error) {
       console.error('Cloud Sync error:', error);
+      setSyncError('Failed to sync data with cloud. Your local changes are saved.');
+      setTimeout(() => setSyncError(null), 5000); // Clear error after 5 seconds
     } finally {
       setIsSyncing(false);
     }
@@ -246,6 +245,27 @@ const App: React.FC = () => {
     SecureStorage.setItem(STORAGE_KEYS.USER, u);
     syncCloudData(u.id);
   };
+
+  // Auth Listener must be after handleUserLogin is defined
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const newUser: User = {
+          id: session.user.id,
+          name: session.user.user_metadata.full_name || 'HemoCare User',
+          email: session.user.email || '',
+          photoURL: session.user.user_metadata.avatar_url
+        };
+        handleUserLogin(newUser);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        SecureStorage.clear();
+        localStorage.clear();
+        window.location.reload();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -598,6 +618,22 @@ const App: React.FC = () => {
       </div>
 
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
+        {/* Sync Error Notification */}
+        {syncError && (
+          <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 px-6 py-3 flex items-center justify-between animate-in slide-in-from-top-2">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="text-red-600 dark:text-red-400" size={18} />
+              <span className="text-sm font-bold text-red-800 dark:text-red-300">{syncError}</span>
+            </div>
+            <button
+              onClick={() => setSyncError(null)}
+              className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        )}
+
         <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:px-8 shrink-0 z-10">
           <div className="flex items-center gap-4 text-slate-400">
             <button

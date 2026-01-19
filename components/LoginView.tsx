@@ -13,6 +13,7 @@ const LoginView: React.FC<Props> = ({ onLogin }) => {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -40,7 +41,13 @@ const LoginView: React.FC<Props> = ({ onLogin }) => {
         });
 
         if (signUpError) throw signUpError;
-        if (data.user) {
+
+        // If signup is successful but no session, it means email verification is required
+        if (data.user && !data.session) {
+          setVerificationSent(true);
+          localStorage.setItem('hemocare_pending_verification', data.user.email);
+        } else if (data.user && data.session) {
+          // If session exists immediately (email verification disabled or auto-confirmed)
           onLogin({
             id: data.user.id,
             name: formData.name,
@@ -77,6 +84,33 @@ const LoginView: React.FC<Props> = ({ onLogin }) => {
       setLoading(false);
     }
   };
+
+  if (verificationSent) {
+    return (
+      <div className="min-h-screen bg-[#f0f4f8] dark:bg-[#020617] flex items-center justify-center p-6 font-inter transition-colors duration-700">
+        <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-[3.5rem] p-10 md:p-14 shadow-2xl border border-slate-200/50 dark:border-slate-800 animate-in fade-in zoom-in duration-700 text-center">
+          <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Mail size={36} className="text-green-500" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase mb-4 tracking-tight">Check your email</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed font-medium">
+            We've sent a verification link to <span className="text-medical-blue font-bold">{formData.email}</span>.
+            Please check your inbox (and spam folder) and click the link to verify your account.
+          </p>
+          <button
+            onClick={() => {
+              setVerificationSent(false);
+              setMode('login');
+              localStorage.removeItem('hemocare_pending_verification');
+            }}
+            className="w-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white py-4 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+          >
+            Return to Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f0f4f8] dark:bg-[#020617] flex items-center justify-center p-6 font-inter transition-colors duration-700">

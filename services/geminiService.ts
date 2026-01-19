@@ -69,8 +69,11 @@ export const chatWithAI = async (messages: Message[], context: { bleeds: BleedEn
     const response = await result.response;
 
     return response.text() || "I'm having trouble connecting. Please contact your HTC for medical concerns.";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini AI Error:", error);
+    if (import.meta.env.DEV) {
+      return `⚠️ AI Error: ${error?.message || 'Unknown error'}. Check console for details. For emergencies, call 911.`;
+    }
     return "Error communicating with AI. If this is an emergency, call 911.";
   }
 };
