@@ -82,6 +82,14 @@ const LoginView: React.FC<Props> = ({ onLogin }) => {
     <div className="min-h-screen bg-[#f0f4f8] dark:bg-[#020617] flex items-center justify-center p-6 font-inter transition-colors duration-700">
       <div className="w-full max-w-md">
         <div className="bg-white dark:bg-slate-900 rounded-[3.5rem] p-10 md:p-14 shadow-2xl border border-slate-200/50 dark:border-slate-800 animate-in fade-in zoom-in duration-700">
+          {/* Hidden Dev Button to Reset Landing Page */}
+          <button
+            onClick={() => { localStorage.removeItem('hemocare_landing_seen'); window.location.reload(); }}
+            className="absolute top-4 left-4 p-2 text-slate-200 hover:text-slate-400 font-mono text-[10px] uppercase opacity-0 hover:opacity-100 transition-opacity"
+          >
+            Reset Flow
+          </button>
+
           <div className="w-20 h-20 bg-medical-blue rounded-[2rem] flex items-center justify-center mx-auto mb-10 text-white shadow-xl shadow-medical-blue/20">
             <Droplets size={36} className="fill-white" />
           </div>
@@ -167,7 +175,7 @@ const LoginView: React.FC<Props> = ({ onLogin }) => {
                 }}
                 className="text-[10px] font-black text-medical-blue dark:text-medical-light uppercase tracking-widest hover:underline"
               >
-                {mode === 'login' ? "Already have an account? Sign In" : "Need an account? Sign Up"}
+                {mode === 'login' ? "Need an account? Sign Up" : "Already have an account? Sign In"}
               </button>
             </div>
           </form>

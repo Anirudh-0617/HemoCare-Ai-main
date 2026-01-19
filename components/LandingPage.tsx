@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Droplets, 
-  ShieldAlert, 
-  Activity, 
-  MessageSquare, 
-  ArrowRight, 
-  Dna, 
-  Sparkles, 
-  ShieldCheck, 
+import {
+  Droplets,
+  ShieldAlert,
+  Activity,
+  MessageSquare,
+  ArrowRight,
+  Dna,
+  Sparkles,
+  ShieldCheck,
   Zap,
   Globe,
   Heart,
@@ -73,11 +73,11 @@ const LandingPage: React.FC<Props> = ({ onEnter }) => {
             </span>
           </div>
           <div className="flex items-center gap-8">
-            <button 
+            <button
               onClick={onEnter}
               className="px-6 py-3 bg-medical-blue text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-medical-blue/30 hover:scale-105 active:scale-95 transition-all"
             >
-              Launch Portal
+              Sign In
             </button>
           </div>
         </div>
@@ -86,34 +86,34 @@ const LandingPage: React.FC<Props> = ({ onEnter }) => {
       {/* Hero Section */}
       <section className="relative pt-48 pb-32 md:pt-64 md:pb-48 overflow-hidden bg-[#0f172a] text-white">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-900 pointer-events-none opacity-50" />
-        
+
         <div className="absolute top-1/4 -left-20 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute bottom-1/4 -right-20 w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse delay-1000" />
-        
+
         <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-500/20 text-blue-300 rounded-full text-[10px] font-black uppercase tracking-[0.25em] mb-8">
             <Sparkles size={12} /> Personalized Care Ecosystem
           </div>
-          
+
           <h1 className="text-6xl md:text-8xl font-black tracking-tightest leading-[0.9] mb-10">
             PRECISION CARE.<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-indigo-300">FOR THE FUTURE.</span>
           </h1>
-          
+
           <p className="max-w-2xl mx-auto text-lg md:text-xl text-slate-400 font-medium leading-relaxed mb-14">
             Intelligent tracking, predictive modeling, and medical AI assistance. Built to soothe the patient journey.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <button 
+            <button
               onClick={onEnter}
               className="w-full sm:w-auto px-12 py-6 bg-white text-slate-900 rounded-[2.5rem] font-black uppercase tracking-widest text-sm shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
             >
               Get Started <ArrowRight size={20} />
             </button>
-            <a 
-              href="https://youtu.be/BoXBuJSURTI?si=qdLyqRbbcJsm_nfT" 
-              target="_blank" 
+            <a
+              href="https://youtu.be/BoXBuJSURTI?si=qdLyqRbbcJsm_nfT"
+              target="_blank"
               rel="noopener noreferrer"
               className="w-full sm:w-auto px-12 py-6 bg-slate-800/50 backdrop-blur-md text-white border border-slate-700 rounded-[2.5rem] font-black uppercase tracking-widest text-sm hover:bg-slate-700 transition-all flex items-center justify-center gap-3"
             >
@@ -134,11 +134,11 @@ const LandingPage: React.FC<Props> = ({ onEnter }) => {
             <h2 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] mb-4">Core Ecosystem</h2>
             <p className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter">Everything you need, <br />all in one calm place.</p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((f, i) => (
-              <div 
-                key={i} 
+              <div
+                key={i}
                 className="group p-10 rounded-[3rem] bg-white dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-800/50 hover:shadow-2xl transition-all duration-500"
               >
                 <div className={`w-14 h-14 ${f.bg} ${f.color} rounded-2xl flex items-center justify-center mb-8 transition-transform group-hover:scale-110`}>
@@ -159,13 +159,13 @@ const LandingPage: React.FC<Props> = ({ onEnter }) => {
             <Heart size={40} className="text-red-500 animate-pulse" />
           </div>
           <h2 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tightest mb-8 uppercase">Start Your Calm Journey</h2>
-          <button 
+          <button
             onClick={onEnter}
             className="px-16 py-7 bg-medical-blue text-white rounded-[3rem] font-black uppercase tracking-[0.25em] text-sm shadow-3xl shadow-medical-blue/30 hover:scale-105 active:scale-95 transition-all"
           >
             Create Your Account
           </button>
-          
+
           <div className="mt-32 pt-12 border-t border-slate-200 dark:border-slate-800/50 flex flex-col md:flex-row items-center justify-between gap-8 opacity-50">
             <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">© 2024 HemoCare AI. All Rights Reserved.</div>
           </div>
