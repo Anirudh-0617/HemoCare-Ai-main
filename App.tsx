@@ -291,6 +291,32 @@ const App: React.FC = () => {
     }
   }, [user, isOnline]);
 
+  const updateBleed = useCallback(async (bleed: BleedEntry) => {
+    setBleeds(prev => prev.map(b => b.id === bleed.id ? bleed : b));
+    if (user && isOnline) {
+      try {
+        const dbBleed = {
+          user_id: user.id,
+          date: bleed.date,
+          time: bleed.time,
+          type: bleed.type,
+          location: bleed.location,
+          severity: bleed.severity,
+          trigger: bleed.trigger,
+          treatment: bleed.treatment,
+          notes: bleed.notes,
+          photo_url: bleed.photoUrl
+        };
+
+        const { error } = await supabase.from('bleeds').update(dbBleed).eq('id', bleed.id);
+        if (error) throw error;
+      } catch (error) {
+        console.error('Error updating bleed:', error);
+        alert(`Failed to update bleed: ${(error as any).message}`);
+      }
+    }
+  }, [user, isOnline]);
+
   const addMed = useCallback(async (med: Medication) => {
     setMeds(prev => [...prev, med]);
     if (user && isOnline) {
@@ -575,7 +601,7 @@ const App: React.FC = () => {
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8 hide-scrollbar bg-slate-50 dark:bg-slate-950 pb-20 md:pb-8">
           {activeTab === 'dashboard' && <Dashboard bleeds={bleeds} meds={meds} onNavigate={setActiveTab} appointments={appointments} geneticProfile={geneticProfile} team={team} />}
-          {activeTab === 'bleeds' && <BleedTracker bleeds={bleeds} onAddBleed={addBleed} onNavigate={setActiveTab} />}
+          {activeTab === 'bleeds' && <BleedTracker bleeds={bleeds} onAddBleed={addBleed} onUpdateBleed={updateBleed} onNavigate={setActiveTab} />}
           {activeTab === 'meds' && <MedicationLog meds={meds} infusions={infusions} onAddMed={addMed} onUpdateMed={updateMedication} onAddInfusion={addInfusion} />}
           {activeTab === 'ai' && <AIAssistant bleeds={bleeds} meds={meds} />}
           {activeTab === 'joints' && <JointMap bleeds={bleeds} onNavigateToPhysio={() => { setHtcInitialMode('physio'); setActiveTab('htc'); }} />}
