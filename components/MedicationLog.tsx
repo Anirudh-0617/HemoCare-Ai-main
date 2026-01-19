@@ -147,8 +147,8 @@ const MedicationLog: React.FC<Props> = ({ meds, infusions, onAddMed, onUpdateMed
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'text-slate-400 hover:text-slate-600'
+              ? 'bg-blue-600 text-white shadow-lg'
+              : 'text-slate-400 hover:text-slate-600'
               }`}
           >
             <tab.icon size={14} />
@@ -371,6 +371,15 @@ const MedicationLog: React.FC<Props> = ({ meds, infusions, onAddMed, onUpdateMed
                   >
                     {Object.values(Frequency).map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Stock (Vials)</label>
+                  <input
+                    type="number"
+                    value={newMed.stockRemaining}
+                    onChange={e => setNewMed({ ...newMed, stockRemaining: parseInt(e.target.value) || 0 })}
+                    className="w-full bg-slate-50 border-none rounded-xl px-4 py-4 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-medical-blue/20 outline-none"
+                  />
                 </div>
               </div>
 
