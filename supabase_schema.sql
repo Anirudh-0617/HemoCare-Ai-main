@@ -253,7 +253,7 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
   RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 7. CHAT USAGE TABLE (For AI Chatbot Credit Limits)
 CREATE TABLE IF NOT EXISTS public.chat_usage (
@@ -324,7 +324,7 @@ BEGIN
     15::INT AS daily_limit,
     200::INT AS monthly_limit;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Function to record a message usage
 CREATE OR REPLACE FUNCTION public.record_chat_message()
@@ -340,7 +340,7 @@ BEGIN
   
   RETURN TRUE;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 8. AUDIT LOGS (HIPAA Compliance)
 -- Track who accessed/modified what and when
@@ -386,7 +386,7 @@ BEGIN
     );
     RETURN NULL; -- Return value is ignored for AFTER triggers
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Apply Triggers to Sensitive Tables
 

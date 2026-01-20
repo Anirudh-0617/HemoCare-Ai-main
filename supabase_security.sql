@@ -13,10 +13,12 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- Only Admins can read everyone's logs (conceptually), Users can read only their own
+DROP POLICY IF EXISTS "Users see own audit logs" ON public.audit_logs;
 CREATE POLICY "Users see own audit logs"
 ON public.audit_logs FOR SELECT
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "System can insert audit logs" ON public.audit_logs;
 CREATE POLICY "System can insert audit logs"
 ON public.audit_logs FOR INSERT
 WITH CHECK (auth.uid() = user_id);
@@ -31,6 +33,7 @@ ON CONFLICT (id) DO NOTHING;
 -- ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 
 -- 3. Policy: Authenticated users can upload their own files
+DROP POLICY IF EXISTS "Users can upload bleed photos" ON storage.objects;
 CREATE POLICY "Users can upload bleed photos"
 ON storage.objects FOR INSERT
 WITH CHECK (
@@ -41,11 +44,13 @@ WITH CHECK (
 
 -- 4. Policy: Users can view files (Adjust based on public/private preference)
 -- Currently allowing any authenticated user to view headers/metadata, but strictly content view requires correct ownership if private
+DROP POLICY IF EXISTS "Users can view bleed photos" ON storage.objects;
 CREATE POLICY "Users can view bleed photos"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'medical-images' AND auth.role() = 'authenticated');
 
 -- 5. Policy: Users can delete their own files
+DROP POLICY IF EXISTS "Users can delete own photos" ON storage.objects;
 CREATE POLICY "Users can delete own photos"
 ON storage.objects FOR DELETE
 USING (bucket_id = 'medical-images' AND auth.uid() = owner);
@@ -65,4 +70,4 @@ BEGIN
   
   RETURN v_log_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
