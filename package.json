@@ -19,7 +19,8 @@
     "react-leaflet": "^5.0.0",
     "react-markdown": "^10.1.0",
     "recharts": "^2.12.2",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

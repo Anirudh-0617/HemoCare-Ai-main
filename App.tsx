@@ -321,6 +321,8 @@ const App: React.FC = () => {
           photo_url: bleed.photoUrl // Explicitly map and do NOT include original bleed object spread
         };
 
+
+
         const { error } = await supabase.from('bleeds').insert([dbBleed]);
         if (error) throw error;
         const webhook = localStorage.getItem(STORAGE_KEYS.AUTOMATION);
@@ -378,6 +380,8 @@ const App: React.FC = () => {
           vial_sizes: med.vialSizes,
           stock_remaining: med.stockRemaining
         };
+
+
 
         const { error } = await supabase.from('medications').insert([dbMed]);
         if (error) throw error;
@@ -443,6 +447,7 @@ const App: React.FC = () => {
     setGeneticProfile(profile);
     if (user && isOnline) {
       try {
+
         const { error } = await supabase.from('profiles').upsert({ id: user.id, genetic_profile: profile }, { onConflict: 'id' });
         if (error) throw error;
       } catch (error) {
