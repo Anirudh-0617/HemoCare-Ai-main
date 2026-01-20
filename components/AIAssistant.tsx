@@ -1,14 +1,19 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Send, Bot, User, ShieldCheck, Sparkles,
   Trash2, Share2, Mic, Info, AlertTriangle,
-  ChevronRight, Phone, Droplets, LifeBuoy, X, Check
+  ChevronRight, Phone, Droplets, LifeBuoy, X, Check, Zap, Clock
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { chatWithAI } from '../services/geminiService';
 import { Message, BleedEntry, Medication } from '../types';
+import {
+  getChatUsage, recordChatMessage, isEmergencyMessage,
+  isOnCooldown, getCooldownRemaining, markMessageSent,
+  ChatUsage, COOLDOWN_MS
+} from '../services/chatUsageService';
 
 interface Props {
   bleeds?: BleedEntry[];
@@ -38,6 +43,28 @@ const AIAssistant: React.FC<Props> = ({ bleeds = [], meds = [] }) => {
   const [copied, setCopied] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Credit system state
+  const [usage, setUsage] = useState<ChatUsage>({
+    dailyMessages: 0, monthlyMessages: 0, dailyLimit: 15, monthlyLimit: 200, canSend: true, isLowCredits: false
+  });
+  const [cooldown, setCooldown] = useState(0);
+  const cooldownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fetch usage on mount
+  useEffect(() => {
+    getChatUsage().then(setUsage);
+  }, []);
+
+  // Cooldown timer
+  useEffect(() => {
+    if (cooldown > 0) {
+      cooldownRef.current = setTimeout(() => setCooldown(prev => prev - 1), 1000);
+    }
+    return () => {
+      if (cooldownRef.current) clearTimeout(cooldownRef.current);
+    };
+  }, [cooldown]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -50,10 +77,35 @@ const AIAssistant: React.FC<Props> = ({ bleeds = [], meds = [] }) => {
   const handleSend = async (content: string = input) => {
     if (!content.trim() || loading) return;
 
+    const isEmergency = isEmergencyMessage(content);
+
+    // Check limits (bypass for emergencies)
+    if (!isEmergency) {
+      if (!usage.canSend) {
+        setMessages(prev => [...prev, {
+          role: 'model',
+          content: `⚠️ **Daily limit reached** (${usage.dailyLimit} messages). Your credits reset at midnight.\n\nFor emergencies, please call **102** or your local HTC.`
+        }]);
+        return;
+      }
+      if (isOnCooldown()) {
+        return; // Button should be disabled, but just in case
+      }
+    }
+
     const userMsg: Message = { role: 'user', content };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
+
+    // Record usage and start cooldown (skip for emergency bypass)
+    if (!isEmergency) {
+      await recordChatMessage();
+      markMessageSent();
+      setCooldown(5); // 5 second cooldown
+      // Refresh usage
+      getChatUsage().then(setUsage);
+    }
 
     const response = await chatWithAI([...messages, userMsg], { bleeds, meds });
     setMessages(prev => [...prev, { role: 'model', content: response }]);
@@ -202,12 +254,19 @@ const AIAssistant: React.FC<Props> = ({ bleeds = [], meds = [] }) => {
             </div>
             <div>
               <h3 className="font-black text-2xl tracking-tight text-white leading-none uppercase">HemoCare AI</h3>
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-3 mt-2">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                 </span>
-                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Regional Assistant Online</span>
+                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Online</span>
+                <span className="text-slate-500">•</span>
+                <div className="flex items-center gap-1.5 bg-white/10 px-2 py-0.5 rounded-full">
+                  <Zap size={10} className={usage.isLowCredits ? 'text-amber-400' : 'text-green-400'} />
+                  <span className={`text-[9px] font-bold uppercase tracking-wider ${usage.isLowCredits ? 'text-amber-400' : 'text-slate-300'}`}>
+                    {usage.dailyLimit - usage.dailyMessages}/{usage.dailyLimit} today
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -315,39 +374,53 @@ const AIAssistant: React.FC<Props> = ({ bleeds = [], meds = [] }) => {
             </button>
             <input
               type="text"
-              placeholder="Ask a medical question..."
+              placeholder={!usage.canSend ? "Daily limit reached..." : "Ask a medical question..."}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyPress={e => e.key === 'Enter' && handleSend()}
-              className="flex-1 bg-transparent border-none outline-none text-slate-800 dark:text-white font-medium placeholder:text-slate-400 h-full py-2"
+              disabled={!usage.canSend && !isEmergencyMessage(input)}
+              className="flex-1 bg-transparent border-none outline-none text-slate-800 dark:text-white font-medium placeholder:text-slate-400 h-full py-2 disabled:opacity-50"
             />
-            <button
-              type="button"
-              onClick={() => handleSend()}
-              disabled={!input.trim() || loading}
-              className={`p-4 rounded-full transition-all shadow-lg hover:scale-105 active:scale-95 ${input.trim()
-                ? 'bg-blue-600 text-white shadow-blue-500/30'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
-                }`}
-            >
-              <Send size={20} className={input.trim() ? 'ml-0.5' : ''} />
-            </button>
+            {cooldown > 0 ? (
+              <div className="p-4 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center gap-2">
+                <Clock size={16} className="animate-pulse" />
+                <span className="text-xs font-bold">{cooldown}s</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleSend()}
+                disabled={!input.trim() || loading || (!usage.canSend && !isEmergencyMessage(input))}
+                className={`p-4 rounded-full transition-all shadow-lg hover:scale-105 active:scale-95 ${input.trim() && (usage.canSend || isEmergencyMessage(input))
+                  ? 'bg-blue-600 text-white shadow-blue-500/30'
+                  : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                  }`}
+              >
+                <Send size={20} className={input.trim() ? 'ml-0.5' : ''} />
+              </button>
+            )}
           </div>
-          <div className="text-center mt-3">
+          <div className="text-center mt-3 flex items-center justify-center gap-3">
             <p className="text-[10px] text-slate-400 font-medium">HemoCare AI can make mistakes. Always verify important information.</p>
+            {usage.isLowCredits && (
+              <span className="text-[9px] font-bold text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
+                {usage.dailyLimit - usage.dailyMessages} credits left today
+              </span>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Protocols Mobile Overlay */}
-      {showProtocolsMobile && (
-        <div className="fixed inset-0 z-[150] lg:hidden">
-          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setShowProtocolsMobile(false)} />
-          <div className="absolute right-0 top-0 bottom-0 w-80 bg-white dark:bg-slate-900 p-6 shadow-2xl animate-in slide-in-from-right duration-300">
-            <ProtocolList onClose={() => setShowProtocolsMobile(false)} />
+        {/* Protocols Mobile Overlay */}
+        {showProtocolsMobile && (
+          <div className="fixed inset-0 z-[150] lg:hidden">
+            <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setShowProtocolsMobile(false)} />
+            <div className="absolute right-0 top-0 bottom-0 w-80 bg-white dark:bg-slate-900 p-6 shadow-2xl animate-in slide-in-from-right duration-300">
+              <ProtocolList onClose={() => setShowProtocolsMobile(false)} />
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+      </div>
 
       {/* Protocols Desktop Sidebar */}
       <div className={`hidden lg:block w-80 shrink-0 transition-all duration-300 ${showProtocolsDesktop ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10 pointer-events-none w-0'}`}>
@@ -398,6 +471,7 @@ const AIAssistant: React.FC<Props> = ({ bleeds = [], meds = [] }) => {
         </div>
       )}
     </div>
+
   );
 };
 

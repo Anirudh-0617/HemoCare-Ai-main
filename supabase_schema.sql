@@ -10,19 +10,46 @@ BEGIN
     DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
     
     -- BLEEDS
+    DROP POLICY IF EXISTS "Users can view their bleeds" ON public.bleeds;
+    DROP POLICY IF EXISTS "Users can insert their bleeds" ON public.bleeds;
+    DROP POLICY IF EXISTS "Users can update their bleeds" ON public.bleeds;
+    DROP POLICY IF EXISTS "Users can delete their bleeds" ON public.bleeds;
     DROP POLICY IF EXISTS "Users can allow all operations on their bleeds" ON public.bleeds;
     
     -- MEDICATIONS
+    DROP POLICY IF EXISTS "Users can view their medications" ON public.medications;
+    DROP POLICY IF EXISTS "Users can insert their medications" ON public.medications;
+    DROP POLICY IF EXISTS "Users can update their medications" ON public.medications;
+    DROP POLICY IF EXISTS "Users can delete their medications" ON public.medications;
     DROP POLICY IF EXISTS "Users can allow all operations on their medications" ON public.medications;
     
     -- INFUSIONS
+    DROP POLICY IF EXISTS "Users can view their infusions" ON public.infusions;
+    DROP POLICY IF EXISTS "Users can insert their infusions" ON public.infusions;
+    DROP POLICY IF EXISTS "Users can update their infusions" ON public.infusions;
+    DROP POLICY IF EXISTS "Users can delete their infusions" ON public.infusions;
     DROP POLICY IF EXISTS "Users can allow all operations on their infusions" ON public.infusions;
     
     -- TEAM MEMBERS
+    DROP POLICY IF EXISTS "Users can view their team members" ON public.team_members;
+    DROP POLICY IF EXISTS "Users can insert their team members" ON public.team_members;
+    DROP POLICY IF EXISTS "Users can update their team members" ON public.team_members;
+    DROP POLICY IF EXISTS "Users can delete their team members" ON public.team_members;
     DROP POLICY IF EXISTS "Users can allow all operations on their team members" ON public.team_members;
     
     -- APPOINTMENTS
+    DROP POLICY IF EXISTS "Users can view their appointments" ON public.appointments;
+    DROP POLICY IF EXISTS "Users can insert their appointments" ON public.appointments;
+    DROP POLICY IF EXISTS "Users can update their appointments" ON public.appointments;
+    DROP POLICY IF EXISTS "Users can delete their appointments" ON public.appointments;
     DROP POLICY IF EXISTS "Users can allow all operations on their appointments" ON public.appointments;
+
+    -- CHAT USAGE
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'chat_usage') THEN
+        DROP POLICY IF EXISTS "Users can view their chat usage" ON public.chat_usage;
+        DROP POLICY IF EXISTS "Users can insert their chat usage" ON public.chat_usage;
+        DROP POLICY IF EXISTS "Users can update their chat usage" ON public.chat_usage;
+    END IF;
 END
 $$;
 
@@ -220,5 +247,92 @@ BEGIN
   VALUES (new.id, FALSE)
   ON CONFLICT (id) DO NOTHING;
   RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 7. CHAT USAGE TABLE (For AI Chatbot Credit Limits)
+CREATE TABLE IF NOT EXISTS public.chat_usage (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
+    daily_messages INT DEFAULT 0,
+    monthly_messages INT DEFAULT 0,
+    last_daily_reset DATE DEFAULT CURRENT_DATE,
+    last_monthly_reset DATE DEFAULT DATE_TRUNC('month', CURRENT_DATE)::DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.chat_usage ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their chat usage" 
+ON public.chat_usage FOR SELECT 
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their chat usage" 
+ON public.chat_usage FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their chat usage" 
+ON public.chat_usage FOR UPDATE 
+USING (auth.uid() = user_id);
+
+-- Helper function to get or create usage record and check/reset counters
+CREATE OR REPLACE FUNCTION public.get_chat_usage()
+RETURNS TABLE (
+  daily_messages INT,
+  monthly_messages INT,
+  daily_limit INT,
+  monthly_limit INT
+) AS $$
+DECLARE
+  v_user_id UUID := auth.uid();
+  v_record RECORD;
+  v_today DATE := CURRENT_DATE;
+  v_month_start DATE := DATE_TRUNC('month', CURRENT_DATE)::DATE;
+BEGIN
+  -- Insert if not exists
+  INSERT INTO public.chat_usage (user_id, daily_messages, monthly_messages, last_daily_reset, last_monthly_reset)
+  VALUES (v_user_id, 0, 0, v_today, v_month_start)
+  ON CONFLICT (user_id) DO NOTHING;
+
+  -- Get record and reset if needed
+  SELECT * INTO v_record FROM public.chat_usage WHERE user_id = v_user_id;
+  
+  -- Daily reset
+  IF v_record.last_daily_reset < v_today THEN
+    UPDATE public.chat_usage 
+    SET daily_messages = 0, last_daily_reset = v_today 
+    WHERE user_id = v_user_id;
+    v_record.daily_messages := 0;
+  END IF;
+  
+  -- Monthly reset
+  IF v_record.last_monthly_reset < v_month_start THEN
+    UPDATE public.chat_usage 
+    SET monthly_messages = 0, last_monthly_reset = v_month_start 
+    WHERE user_id = v_user_id;
+    v_record.monthly_messages := 0;
+  END IF;
+  
+  RETURN QUERY SELECT 
+    v_record.daily_messages,
+    v_record.monthly_messages,
+    15::INT AS daily_limit,
+    200::INT AS monthly_limit;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to record a message usage
+CREATE OR REPLACE FUNCTION public.record_chat_message()
+RETURNS BOOLEAN AS $$
+DECLARE
+  v_user_id UUID := auth.uid();
+BEGIN
+  UPDATE public.chat_usage 
+  SET 
+    daily_messages = daily_messages + 1,
+    monthly_messages = monthly_messages + 1
+  WHERE user_id = v_user_id;
+  
+  RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
