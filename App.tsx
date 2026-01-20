@@ -99,7 +99,7 @@ const App: React.FC = () => {
   const [meds, setMeds] = useState<Medication[]>([]);
   const [infusions, setInfusions] = useState<InfusionRecord[]>([]);
   const [geneticProfile, setGeneticProfile] = useState<GeneticProfile | null>(null);
-  const [insurance, setInsurance] = useState<InsuranceProfile>(DEFAULT_INSURANCE);
+  const [insurance, setInsurance] = useState<InsuranceProfile | null>(null);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 

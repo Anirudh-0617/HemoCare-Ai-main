@@ -50,6 +50,11 @@ BEGIN
         DROP POLICY IF EXISTS "Users can insert their chat usage" ON public.chat_usage;
         DROP POLICY IF EXISTS "Users can update their chat usage" ON public.chat_usage;
     END IF;
+
+    -- AUDIT LOGS
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'audit_logs') THEN
+        DROP POLICY IF EXISTS "System can insert audit logs" ON public.audit_logs;
+    END IF;
 END
 $$;
 
@@ -336,3 +341,75 @@ BEGIN
   RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 8. AUDIT LOGS (HIPAA Compliance)
+-- Track who accessed/modified what and when
+
+CREATE TABLE IF NOT EXISTS public.audit_logs (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    table_name TEXT NOT NULL,
+    record_id UUID NOT NULL,
+    operation TEXT NOT NULL, -- INSERT, UPDATE, DELETE
+    performed_by UUID REFERENCES auth.users(id),
+    old_data JSONB,
+    new_data JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- Only Allow System/Admins to View/Insert (No public access)
+-- For this simple app, we just restrict to authenticated users but normally this would be admin-only
+CREATE POLICY "System can insert audit logs" 
+ON public.audit_logs FOR INSERT 
+WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Create the trigger function
+CREATE OR REPLACE FUNCTION public.log_audit_event()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.audit_logs (
+        table_name,
+        record_id,
+        operation,
+        performed_by,
+        old_data,
+        new_data
+    )
+    VALUES (
+        TG_TABLE_NAME,
+        COALESCE(NEW.id, OLD.id),
+        TG_OP,
+        auth.uid(),
+        CASE WHEN TG_OP = 'DELETE' OR TG_OP = 'UPDATE' THEN to_jsonb(OLD) ELSE NULL END,
+        CASE WHEN TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN to_jsonb(NEW) ELSE NULL END
+    );
+    RETURN NULL; -- Return value is ignored for AFTER triggers
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Apply Triggers to Sensitive Tables
+
+-- Profiles
+DROP TRIGGER IF EXISTS on_profile_change ON public.profiles;
+CREATE TRIGGER on_profile_change
+AFTER INSERT OR UPDATE OR DELETE ON public.profiles
+FOR EACH ROW EXECUTE FUNCTION public.log_audit_event();
+
+-- Bleeds
+DROP TRIGGER IF EXISTS on_bleed_change ON public.bleeds;
+CREATE TRIGGER on_bleed_change
+AFTER INSERT OR UPDATE OR DELETE ON public.bleeds
+FOR EACH ROW EXECUTE FUNCTION public.log_audit_event();
+
+-- Medications
+DROP TRIGGER IF EXISTS on_medication_change ON public.medications;
+CREATE TRIGGER on_medication_change
+AFTER INSERT OR UPDATE OR DELETE ON public.medications
+FOR EACH ROW EXECUTE FUNCTION public.log_audit_event();
+
+-- Infusions
+DROP TRIGGER IF EXISTS on_infusion_change ON public.infusions;
+CREATE TRIGGER on_infusion_change
+AFTER INSERT OR UPDATE OR DELETE ON public.infusions
+FOR EACH ROW EXECUTE FUNCTION public.log_audit_event();
