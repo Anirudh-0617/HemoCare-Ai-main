@@ -52,7 +52,7 @@ const BleedTracker: React.FC<Props> = ({ bleeds, onAddBleed, onUpdateBleed, onNa
       : newBleed.location;
 
     const entryData: BleedEntry = {
-      id: editingId || Date.now().toString(),
+      id: editingId || crypto.randomUUID(),
       date: newBleed.date || new Date().toISOString().split('T')[0],
       time: newBleed.time || '12:00',
       type: newBleed.type as BleedType,

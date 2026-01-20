@@ -47,7 +47,7 @@ const CareTeam: React.FC<Props> = ({ team, appointments, onAddMember, onUpdateMe
     }
 
     const member: TeamMember = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       name: newMember.name || '',
       role: newMember.role || '',
       specialty: newMember.specialty || '',

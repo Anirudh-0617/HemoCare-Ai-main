@@ -85,7 +85,7 @@ const MedicationLog: React.FC<Props> = ({ meds, infusions, onAddMed, onUpdateMed
     } else {
       onAddMed({
         ...newMed as Medication,
-        id: Date.now().toString()
+        id: crypto.randomUUID()
       });
     }
     setShowAddMed(false);
@@ -114,7 +114,7 @@ const MedicationLog: React.FC<Props> = ({ meds, infusions, onAddMed, onUpdateMed
     e.preventDefault();
     onAddInfusion({
       ...newInfusion as InfusionRecord,
-      id: Date.now().toString()
+      id: crypto.randomUUID()
     });
     setShowLogInfusion(false);
   };
